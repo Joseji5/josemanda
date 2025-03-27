@@ -6,17 +6,8 @@ canvas.height = 600;
 
 let gameRunning = false;
 
-const player1 = {
-    x: 100, y: 250, size: 50, color: "blue",
-    speed: 5, vx: 0, vy: 0, lives: 3, keyUp: "w",
-    attack: false, attackCooldown: false
-};
-
-const player2 = {
-    x: 650, y: 250, size: 50, color: "red",
-    speed: 5, vx: 0, vy: 0, lives: 3, keyUp: "ArrowUp",
-    attack: false, attackCooldown: false
-};
+const player1 = { x: 100, y: 250, size: 50, color: "blue", speed: 5, vx: 0, vy: 0, lives: 3, attack: false, attackCooldown: false };
+const player2 = { x: 650, y: 250, size: 50, color: "red", speed: 5, vx: 0, vy: 0, lives: 3, attack: false, attackCooldown: false };
 
 const keys = {};
 
@@ -37,7 +28,7 @@ function drawPlayer(player, number) {
 }
 
 function drawLives() {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "white";
     ctx.font = "20px Arial";
     ctx.fillText("Jugador 1", 50, 50);
     ctx.fillText("Jugador 2", 650, 50);
@@ -101,12 +92,12 @@ function gameLoop() {
 document.addEventListener("keydown", (e) => {
     keys[e.key] = true;
 
-    if (e.key === player1.keyUp && keys[player1.keyUp] && !player1.attackCooldown) {
+    if (e.key === "w" && keys["w"] && !player1.attackCooldown) {
         player1.attack = true;
         player1.attackCooldown = true;
         setTimeout(() => (player1.attack = false), 500);
     }
-    if (e.key === player2.keyUp && keys[player2.keyUp] && !player2.attackCooldown) {
+    if (e.key === "ArrowUp" && keys["ArrowUp"] && !player2.attackCooldown) {
         player2.attack = true;
         player2.attackCooldown = true;
         setTimeout(() => (player2.attack = false), 500);
@@ -133,55 +124,3 @@ document.getElementById("btn-reiniciar").addEventListener("click", () => {
     gameRunning = true;
     gameLoop();
 });
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-const socket = io();
-let players = {};
-let playerId = null;
-
-socket.on("playerId", id => {
-    playerId = id;
-});
-
-socket.on("updatePlayers", serverPlayers => {
-    players = serverPlayers;
-});
-
-const keys = {};
-window.addEventListener("keydown", e => (keys[e.key] = true));
-window.addEventListener("keyup", e => (keys[e.key] = false));
-
-function update() {
-    if (playerId && players[playerId]) {
-        let player = players[playerId];
-        if (keys["w"]) player.y -= 5;
-        if (keys["s"]) player.y += 5;
-        if (keys["a"]) player.x -= 5;
-        if (keys["d"]) player.x += 5;
-        socket.emit("move", player);
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let id in players) {
-        let p = players[id];
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
-        ctx.fillStyle = p.id === playerId ? "blue" : "red";
-        ctx.fill();
-        ctx.fillStyle = "white";
-        ctx.fillText(p.id, p.x - 5, p.y + 5);
-    }
-}
-
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-gameLoop();
