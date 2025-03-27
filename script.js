@@ -2,83 +2,114 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 canvas.width = 800;
-canvas.height = 600;
+canvas.height = 400;
 
 let gameRunning = false;
+let score = 0;
+let speed = 4;
 
-const player1 = { x: 100, y: 250, size: 50, color: "blue", speed: 5, vx: 0, vy: 0, lives: 3, attack: false, attackCooldown: false };
-const player2 = { x: 650, y: 250, size: 50, color: "red", speed: 5, vx: 0, vy: 0, lives: 3, attack: false, attackCooldown: false };
+const player = {
+    x: 50,
+    y: canvas.height - 50,
+    size: 30,
+    color: "#00ffcc",
+    vy: 0,
+    gravity: 0.8,
+    jumpPower: -12,
+    onGround: true
+};
 
-const keys = {};
+const obstacles = [];
+const points = [];
 
-function drawPlayer(player, number) {
+function drawPlayer() {
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.size, player.size);
-
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    ctx.fillText(number, player.x + 15, player.y + 35);
-
-    if (player.attack) {
-        ctx.beginPath();
-        ctx.arc(player.x + 25, player.y + 25, 40, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
-        ctx.fill();
-    }
 }
 
-function drawLives() {
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Jugador 1", 50, 50);
-    ctx.fillText("Jugador 2", 650, 50);
-
-    for (let i = 0; i < 3; i++) {
-        ctx.beginPath();
-        ctx.arc(50 + i * 30, 70, 10, 0, Math.PI * 2);
-        ctx.fillStyle = i < player1.lives ? "blue" : "gray";
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(750 - i * 30, 70, 10, 0, Math.PI * 2);
-        ctx.fillStyle = i < player2.lives ? "red" : "gray";
-        ctx.fill();
-    }
+function drawObstacles() {
+    ctx.fillStyle = "red";
+    obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+    });
 }
 
-function checkAttack(player, opponent) {
-    if (player.attack) {
-        const dist = Math.hypot(opponent.x - player.x, opponent.y - player.y);
-        if (dist < 60) {
-            opponent.lives--;
-            player.attack = false;
-            setTimeout(() => (player.attackCooldown = false), 1000);
-        }
-    }
+function drawPoints() {
+    ctx.fillStyle = "blue";
+    points.forEach(point => {
+        ctx.fillRect(point.x, point.y, point.size, point.size);
+    });
 }
 
 function updateGame() {
-    player1.x += player1.vx;
-    player1.y += player1.vy;
-    player2.x += player2.vx;
-    player2.y += player2.vy;
+    player.vy += player.gravity;
+    player.y += player.vy;
 
-    checkAttack(player1, player2);
-    checkAttack(player2, player1);
-
-    if (player1.lives === 0 || player2.lives === 0) {
-        gameRunning = false;
-        document.getElementById("pantalla-final").style.display = "flex";
-        document.getElementById("mensaje-ganador").innerText =
-            player1.lives > 0 ? "¡Jugador 1 GANA!" : "¡Jugador 2 GANA!";
+    if (player.y > canvas.height - 50) {
+        player.y = canvas.height - 50;
+        player.onGround = true;
+        player.vy = 0;
     }
+
+    obstacles.forEach(obstacle => {
+        obstacle.x -= speed;
+    });
+
+    points.forEach(point => {
+        point.x -= speed;
+    });
+
+    if (Math.random() < 0.02) {
+        obstacles.push({ x: canvas.width, y: canvas.height - 50, size: 30 });
+    }
+
+    if (Math.random() < 0.01) {
+        points.push({ x: canvas.width, y: canvas.height - 100, size: 20 });
+    }
+
+    obstacles.forEach((obstacle, index) => {
+        if (
+            player.x < obstacle.x + obstacle.size &&
+            player.x + player.size > obstacle.x &&
+            player.y < obstacle.y + obstacle.size &&
+            player.y + player.size > obstacle.y
+        ) {
+            endGame();
+        }
+
+        if (obstacle.x < -obstacle.size) {
+            obstacles.splice(index, 1);
+        }
+    });
+
+    points.forEach((point, index) => {
+        if (
+            player.x < point.x + point.size &&
+            player.x + player.size > point.x &&
+            player.y < point.y + point.size &&
+            player.y + player.size > point.y
+        ) {
+            score += 10;
+            points.splice(index, 1);
+        }
+
+        if (point.x < -point.size) {
+            points.splice(index, 1);
+        }
+    });
+
+    speed += 0.001;
 }
 
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawLives();
-    drawPlayer(player1, "1");
-    drawPlayer(player2, "2");
+    drawPlayer();
+    drawObstacles();
+    drawPoints();
+
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Puntuación: " + score, 10, 30);
 }
 
 function gameLoop() {
@@ -90,37 +121,32 @@ function gameLoop() {
 }
 
 document.addEventListener("keydown", (e) => {
-    keys[e.key] = true;
-
-    if (e.key === "w" && keys["w"] && !player1.attackCooldown) {
-        player1.attack = true;
-        player1.attackCooldown = true;
-        setTimeout(() => (player1.attack = false), 500);
+    if (e.code === "Space" && player.onGround) {
+        player.vy = player.jumpPower;
+        player.onGround = false;
     }
-    if (e.key === "ArrowUp" && keys["ArrowUp"] && !player2.attackCooldown) {
-        player2.attack = true;
-        player2.attackCooldown = true;
-        setTimeout(() => (player2.attack = false), 500);
-    }
-});
-
-document.addEventListener("keyup", (e) => {
-    keys[e.key] = false;
 });
 
 document.getElementById("btn-jugar").addEventListener("click", () => {
     document.getElementById("pantalla-inicio").style.display = "none";
     canvas.style.display = "block";
     gameRunning = true;
+    score = 0;
+    speed = 4;
     gameLoop();
 });
 
 document.getElementById("btn-reiniciar").addEventListener("click", () => {
-    player1.lives = 3;
-    player2.lives = 3;
-    player1.x = 100;
-    player2.x = 650;
     document.getElementById("pantalla-final").style.display = "none";
     gameRunning = true;
+    score = 0;
+    speed = 4;
     gameLoop();
 });
+
+function endGame() {
+    gameRunning = false;
+    document.getElementById("pantalla-final").style.display = "flex";
+    document.getElementById("mensaje-resultado").innerText = "¡Perdiste! Puntuación: " + score;
+}
+
