@@ -1,6 +1,6 @@
 body {
     text-align: center;
-    background: linear-gradient(45deg, #1a1a1a, #333333);
+    background: linear-gradient(45deg, #0d0d0d, #1a1a1a);
     font-family: 'Arial', sans-serif;
     margin: 0;
     overflow: hidden;
@@ -23,28 +23,28 @@ body {
 h1 {
     font-size: 60px;
     font-weight: bold;
-    text-shadow: 0px 0px 20px #00bfff;
+    text-shadow: 0px 0px 20px #00ffcc;
 }
 
 button {
-    background: #00bfff;
-    color: white;
+    background: #00ffcc;
+    color: black;
     border: none;
     padding: 15px 40px;
     font-size: 24px;
     cursor: pointer;
     border-radius: 10px;
-    box-shadow: 0px 0px 15px #00bfff;
+    box-shadow: 0px 0px 15px #00ffcc;
     transition: 0.3s;
 }
 
 button:hover {
-    background: #0088cc;
-    box-shadow: 0px 0px 25px #00bfff;
+    background: #00cc99;
+    box-shadow: 0px 0px 25px #00ffcc;
 }
 
 canvas {
     display: none;
-    background: white;
+    background: black;
     box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
 }
