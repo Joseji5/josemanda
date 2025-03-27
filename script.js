@@ -1,152 +1,106 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+// Configuración básica
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("gameCanvas") });
 
-canvas.width = 800;
-canvas.height = 400;
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-let gameRunning = false;
-let score = 0;
-let speed = 4;
+// Crear nave
+const geometry = new THREE.ConeGeometry(1, 2, 8);
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const player = new THREE.Mesh(geometry, material);
+scene.add(player);
 
-const player = {
-    x: 50,
-    y: canvas.height - 50,
-    size: 30,
-    color: "#00ffcc",
-    vy: 0,
-    gravity: 0.8,
-    jumpPower: -12,
-    onGround: true
-};
+player.position.z = -5;
 
-const obstacles = [];
-const points = [];
+// Controles
+let keys = {};
+window.addEventListener("keydown", (event) => keys[event.key] = true);
+window.addEventListener("keyup", (event) => keys[event.key] = false);
 
-function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+function movePlayer() {
+    if (keys["ArrowLeft"]) player.position.x -= 0.1;
+    if (keys["ArrowRight"]) player.position.x += 0.1;
+    if (keys["ArrowUp"]) player.position.y += 0.1;
+    if (keys["ArrowDown"]) player.position.y -= 0.1;
 }
 
-function drawObstacles() {
-    ctx.fillStyle = "red";
-    obstacles.forEach(obstacle => {
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
-    });
+// Crear enemigos
+const enemies = [];
+function createEnemy() {
+    const geo = new THREE.SphereGeometry(0.5, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const enemy = new THREE.Mesh(geo, mat);
+    enemy.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 5, -10);
+    scene.add(enemy);
+    enemies.push(enemy);
 }
 
-function drawPoints() {
-    ctx.fillStyle = "blue";
-    points.forEach(point => {
-        ctx.fillRect(point.x, point.y, point.size, point.size);
-    });
-}
-
-function updateGame() {
-    player.vy += player.gravity;
-    player.y += player.vy;
-
-    if (player.y > canvas.height - 50) {
-        player.y = canvas.height - 50;
-        player.onGround = true;
-        player.vy = 0;
-    }
-
-    obstacles.forEach(obstacle => {
-        obstacle.x -= speed;
-    });
-
-    points.forEach(point => {
-        point.x -= speed;
-    });
-
-    if (Math.random() < 0.02) {
-        obstacles.push({ x: canvas.width, y: canvas.height - 50, size: 30 });
-    }
-
-    if (Math.random() < 0.01) {
-        points.push({ x: canvas.width, y: canvas.height - 100, size: 20 });
-    }
-
-    obstacles.forEach((obstacle, index) => {
-        if (
-            player.x < obstacle.x + obstacle.size &&
-            player.x + player.size > obstacle.x &&
-            player.y < obstacle.y + obstacle.size &&
-            player.y + player.size > obstacle.y
-        ) {
-            endGame();
-        }
-
-        if (obstacle.x < -obstacle.size) {
-            obstacles.splice(index, 1);
+// IA de enemigos
+function moveEnemies() {
+    enemies.forEach((enemy, index) => {
+        enemy.position.z += 0.05;
+        if (enemy.position.z > 0) {
+            scene.remove(enemy);
+            enemies.splice(index, 1);
+            createEnemy();
         }
     });
-
-    points.forEach((point, index) => {
-        if (
-            player.x < point.x + point.size &&
-            player.x + player.size > point.x &&
-            player.y < point.y + point.size &&
-            player.y + player.size > point.y
-        ) {
-            score += 10;
-            points.splice(index, 1);
-        }
-
-        if (point.x < -point.size) {
-            points.splice(index, 1);
-        }
-    });
-
-    speed += 0.001;
 }
 
-function drawGame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawPlayer();
-    drawObstacles();
-    drawPoints();
-
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Puntuación: " + score, 10, 30);
+// Disparos
+const bullets = [];
+function shoot() {
+    const bulletGeo = new THREE.BoxGeometry(0.2, 0.2, 0.5);
+    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+    bullet.position.set(player.position.x, player.position.y, player.position.z - 1);
+    scene.add(bullet);
+    bullets.push(bullet);
 }
 
-function gameLoop() {
-    if (gameRunning) {
-        updateGame();
-        drawGame();
-        requestAnimationFrame(gameLoop);
-    }
-}
-
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && player.onGround) {
-        player.vy = player.jumpPower;
-        player.onGround = false;
-    }
+window.addEventListener("keydown", (event) => {
+    if (event.key === " ") shoot();
 });
 
-document.getElementById("btn-jugar").addEventListener("click", () => {
-    document.getElementById("pantalla-inicio").style.display = "none";
-    canvas.style.display = "block";
-    gameRunning = true;
-    score = 0;
-    speed = 4;
-    gameLoop();
-});
-
-document.getElementById("btn-reiniciar").addEventListener("click", () => {
-    document.getElementById("pantalla-final").style.display = "none";
-    gameRunning = true;
-    score = 0;
-    speed = 4;
-    gameLoop();
-});
-
-function endGame() {
-    gameRunning = false;
-    document.getElementById("pantalla-final").style.display = "flex";
-    document.getElementById("mensaje-resultado").innerText = "¡Perdiste! Puntuación: " + score;
+// Movimiento de disparos
+function moveBullets() {
+    bullets.forEach((bullet, index) => {
+        bullet.position.z -= 0.2;
+        if (bullet.position.z < -10) {
+            scene.remove(bullet);
+            bullets.splice(index, 1);
+        }
+    });
 }
+
+// Colisiones
+function checkCollisions() {
+    bullets.forEach((bullet, bulletIndex) => {
+        enemies.forEach((enemy, enemyIndex) => {
+            const distance = bullet.position.distanceTo(enemy.position);
+            if (distance < 0.5) {
+                scene.remove(bullet);
+                scene.remove(enemy);
+                bullets.splice(bulletIndex, 1);
+                enemies.splice(enemyIndex, 1);
+                createEnemy();
+            }
+        });
+    });
+}
+
+// Animación
+function animate() {
+    requestAnimationFrame(animate);
+    movePlayer();
+    moveEnemies();
+    moveBullets();
+    checkCollisions();
+    renderer.render(scene, camera);
+}
+
+for (let i = 0; i < 5; i++) createEnemy();
+animate();
 
